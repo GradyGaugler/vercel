@@ -47,7 +47,7 @@ export default function SecurityControlsPage() {
                 Configure which AI providers your organization members can use and set custom API keys or endpoints.
               </p>
 
-              <AIProviderSettings />
+              <AIProviderSettings expanded={false} />
             </div>
           )}
         </div>

@@ -17,10 +17,10 @@ interface AIProvider {
 }
 
 interface AIProviderSettingsProps {
-  expanded: boolean
+  expanded?: boolean
 }
 
-export default function AIProviderSettings({ expanded }: AIProviderSettingsProps) {
+export default function AIProviderSettings({ expanded = false }: AIProviderSettingsProps) {
   const [providers, setProviders] = useState<AIProvider[]>([
     { id: "anthropic", name: "Anthropic", enabled: true, key: "", url: "", testStatus: "idle" },
     { id: "azure", name: "Azure", enabled: true, key: "", url: "", testStatus: "idle" },
@@ -45,9 +45,17 @@ export default function AIProviderSettings({ expanded }: AIProviderSettingsProps
   ])
 
   const [showAllProviders, setShowAllProviders] = useState(false)
+  const [expandedProviders, setExpandedProviders] = useState<string[]>(
+    expanded ? providers.filter((p) => p.enabled).map((p) => p.id) : [],
+  )
 
   const updateProvider = (id: string, updates: Partial<AIProvider>) => {
     setProviders(providers.map((provider) => (provider.id === id ? { ...provider, ...updates } : provider)))
+
+    // If disabling a provider, remove it from expanded list
+    if (updates.enabled === false) {
+      setExpandedProviders((prev) => prev.filter((expandedId) => expandedId !== id))
+    }
   }
 
   const saveAndTest = (id: string) => {
@@ -81,7 +89,7 @@ export default function AIProviderSettings({ expanded }: AIProviderSettingsProps
 
   return (
     <div className="space-y-4">
-      <Accordion type="multiple" defaultValue={expanded ? providers.map((p) => p.id) : []} className="space-y-4">
+      <Accordion type="multiple" value={expandedProviders} onValueChange={setExpandedProviders} className="space-y-4">
         {visibleProviders.map((provider, index) => (
           <AccordionItem
             key={provider.id}
@@ -90,9 +98,15 @@ export default function AIProviderSettings({ expanded }: AIProviderSettingsProps
           >
             <div className="flex items-center justify-between px-4 py-3 bg-gray-800 bg-opacity-30">
               <div className="flex items-center">
-                <AccordionTrigger className="hover:no-underline py-0">
-                  <span className="font-medium">{provider.name}</span>
-                </AccordionTrigger>
+                {provider.enabled ? (
+                  <AccordionTrigger className="hover:no-underline py-0">
+                    <span className="font-medium">{provider.name}</span>
+                  </AccordionTrigger>
+                ) : (
+                  <div className="py-0">
+                    <span className="font-medium text-gray-500">{provider.name}</span>
+                  </div>
+                )}
                 <div className="flex items-center ml-2 space-x-1">
                   {provider.key && <span className="w-2 h-2 bg-green-500 rounded-full" title="API Key configured" />}
                   {provider.url && <span className="w-2 h-2 bg-blue-500 rounded-full" title="Custom URL configured" />}
@@ -214,9 +228,15 @@ export default function AIProviderSettings({ expanded }: AIProviderSettingsProps
               >
                 <div className="flex items-center justify-between px-4 py-3 bg-gray-800 bg-opacity-30">
                   <div className="flex items-center">
-                    <AccordionTrigger className="hover:no-underline py-0">
-                      <span className="font-medium">{provider.name}</span>
-                    </AccordionTrigger>
+                    {provider.enabled ? (
+                      <AccordionTrigger className="hover:no-underline py-0">
+                        <span className="font-medium">{provider.name}</span>
+                      </AccordionTrigger>
+                    ) : (
+                      <div className="py-0">
+                        <span className="font-medium text-gray-500">{provider.name}</span>
+                      </div>
+                    )}
                     <div className="flex items-center ml-2 space-x-1">
                       {provider.key && (
                         <span className="w-2 h-2 bg-green-500 rounded-full" title="API Key configured" />
