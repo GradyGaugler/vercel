@@ -26,17 +26,26 @@ export default function AIProviderSettings() {
       name: "Anthropic",
       icon: "🤖",
       enabled: true,
-      key: "",
-      url: "",
+      key: "sk_ant_123456789",
+      url: "https://api.anthropic.com",
       expanded: true,
       testStatus: "idle",
     },
-    { id: "azure", name: "Azure", icon: "☁️", enabled: false, key: "", url: "", expanded: false, testStatus: "idle" },
+    {
+      id: "azure",
+      name: "Azure",
+      icon: "☁️",
+      enabled: true,
+      key: "azure_key_123456",
+      url: "",
+      expanded: false,
+      testStatus: "idle",
+    },
     {
       id: "deepseek",
       name: "DeepSeek",
       icon: "🔍",
-      enabled: false,
+      enabled: true,
       key: "",
       url: "",
       expanded: false,
@@ -47,8 +56,8 @@ export default function AIProviderSettings() {
       name: "GitKraken AI",
       icon: "🐙",
       enabled: false,
-      key: "",
-      url: "",
+      key: "gk_123456",
+      url: "https://ai.gitkraken.com",
       expanded: false,
       testStatus: "idle",
     },
@@ -56,8 +65,8 @@ export default function AIProviderSettings() {
       id: "github-copilot",
       name: "GitHub Copilot",
       icon: "🐱",
-      enabled: false,
-      key: "",
+      enabled: true,
+      key: "github_123456",
       url: "",
       expanded: false,
       testStatus: "idle",
@@ -108,8 +117,8 @@ export default function AIProviderSettings() {
           ? {
               ...provider,
               ...updates,
-              // If disabling, also collapse
-              ...(updates.enabled === false ? { expanded: false } : {}),
+              // If disabling, also collapse and clear errors
+              ...(updates.enabled === false ? { expanded: false, error: undefined, testStatus: "idle" } : {}),
               // Clear error when updating fields
               ...(updates.key !== undefined || updates.url !== undefined ? { error: undefined } : {}),
             }
@@ -125,8 +134,8 @@ export default function AIProviderSettings() {
           ? {
               ...provider,
               ...updates,
-              // If disabling, also collapse
-              ...(updates.enabled === false ? { expanded: false } : {}),
+              // If disabling, also collapse and clear errors
+              ...(updates.enabled === false ? { expanded: false, error: undefined, testStatus: "idle" } : {}),
               // Clear error when updating fields
               ...(updates.key !== undefined || updates.url !== undefined ? { error: undefined } : {}),
             }
@@ -138,7 +147,7 @@ export default function AIProviderSettings() {
   const saveAndTest = (provider: AIProvider, updateFn: (id: string, updates: Partial<AIProvider>) => void) => {
     // Validate: URL requires a key
     if (provider.url && !provider.key) {
-      updateFn(provider.id, { error: "A compatible API key is required when using a custom URL" })
+      updateFn(provider.id, { error: "A compatible API key is required when using a custom URL", testStatus: "error" })
       return
     }
 
@@ -150,13 +159,45 @@ export default function AIProviderSettings() {
       const success = Math.random() > 0.3 // 70% chance of success for demo
       updateFn(provider.id, {
         testStatus: success ? "success" : "error",
+        error: success ? undefined : "Connection failed. Please check your credentials.",
       })
 
-      // Reset status after 3 seconds
-      setTimeout(() => {
-        updateFn(provider.id, { testStatus: "idle" })
-      }, 3000)
+      // Reset success status after 3 seconds
+      if (success) {
+        setTimeout(() => {
+          updateFn(provider.id, { testStatus: "idle" })
+        }, 3000)
+      }
     }, 1500)
+  }
+
+  const getProviderStatus = (provider: AIProvider) => {
+    // Don't show any status indicators for disabled providers
+    if (!provider.enabled) {
+      return null
+    }
+
+    // Only show indicators for enabled providers
+    if (provider.error) {
+      return {
+        label: "Error",
+        className: "bg-red-500 bg-opacity-30 text-red-400",
+        disabledClassName: "bg-gray-600 bg-opacity-50 text-gray-500",
+      }
+    } else if (provider.url && provider.key) {
+      return {
+        label: "URL",
+        className: "bg-green-500 bg-opacity-30 text-green-400",
+        disabledClassName: "bg-gray-600 bg-opacity-50 text-gray-500",
+      }
+    } else if (provider.key) {
+      return {
+        label: "Key",
+        className: "bg-blue-500 bg-opacity-30 text-blue-400",
+        disabledClassName: "bg-gray-600 bg-opacity-50 text-gray-500",
+      }
+    }
+    return null
   }
 
   const ProviderCard = ({
@@ -166,11 +207,6 @@ export default function AIProviderSettings() {
     provider: AIProvider
     onUpdate: (id: string, updates: Partial<AIProvider>) => void
   }) => {
-    // Use refs to maintain input values between renders
-    // Remove these lines:
-    // const keyInputRef = useRef<HTMLInputElement>(null)
-    // const urlInputRef = useRef<HTMLInputElement>(null)
-
     const handleKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       onUpdate(provider.id, { key: e.target.value })
     }
@@ -178,6 +214,8 @@ export default function AIProviderSettings() {
     const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       onUpdate(provider.id, { url: e.target.value })
     }
+
+    const status = getProviderStatus(provider)
 
     return (
       <div className="border border-gray-700 rounded-md overflow-hidden mb-3">
@@ -200,31 +238,16 @@ export default function AIProviderSettings() {
               </div>
             )}
 
-            {/* Indicators for key and URL */}
-            {(provider.key || provider.url) && (
-              <div className="flex items-center gap-1 ml-2">
-                {provider.key && (
-                  <span
-                    className={`px-1.5 py-0.5 text-xs rounded ${
-                      provider.enabled
-                        ? "bg-blue-500 bg-opacity-30 text-blue-400"
-                        : "bg-gray-600 bg-opacity-50 text-gray-500"
-                    }`}
-                  >
-                    Key
-                  </span>
-                )}
-                {provider.url && (
-                  <span
-                    className={`px-1.5 py-0.5 text-xs rounded ${
-                      provider.enabled
-                        ? "bg-green-500 bg-opacity-30 text-green-400"
-                        : "bg-gray-600 bg-opacity-50 text-gray-500"
-                    }`}
-                  >
-                    URL
-                  </span>
-                )}
+            {/* Single status indicator */}
+            {status && (
+              <div className="flex items-center ml-2">
+                <span
+                  className={`px-1.5 py-0.5 text-xs rounded ${
+                    provider.enabled ? status.className : status.disabledClassName
+                  }`}
+                >
+                  {status.label}
+                </span>
               </div>
             )}
           </div>
@@ -241,7 +264,7 @@ export default function AIProviderSettings() {
               <input
                 type="password"
                 value={provider.key}
-                onChange={(e) => onUpdate(provider.id, { key: e.target.value })}
+                onChange={handleKeyChange}
                 placeholder="Enter API key"
                 className="flex h-10 w-full rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#a881fc] focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 pr-10"
               />
@@ -258,7 +281,7 @@ export default function AIProviderSettings() {
               <input
                 type="text"
                 value={provider.url}
-                onChange={(e) => onUpdate(provider.id, { url: e.target.value })}
+                onChange={handleUrlChange}
                 placeholder="Enter Custom URL"
                 className="flex h-10 w-full rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#a881fc] focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 pr-10"
               />
