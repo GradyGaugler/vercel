@@ -1,381 +1,331 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Switch } from "@/components/ui/switch"
-import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Check, X, Loader2 } from "lucide-react"
+import { ChevronDown, ChevronUp, AlertCircle, Check, X, Loader2, XCircle } from "lucide-react"
 
 interface AIProvider {
   id: string
   name: string
+  icon: string
   enabled: boolean
   key: string
   url: string
-  testStatus: "idle" | "loading" | "success" | "error"
+  expanded: boolean
+  error?: string
+  testStatus?: "idle" | "loading" | "success" | "error"
 }
 
-interface AIProviderSettingsProps {
-  expanded?: boolean
-}
-
-export default function AIProviderSettings({ expanded = false }: AIProviderSettingsProps) {
-  const [providers, setProviders] = useState<AIProvider[]>([
-    { id: "anthropic", name: "Anthropic", enabled: true, key: "", url: "", testStatus: "idle" },
-    { id: "azure", name: "Azure", enabled: true, key: "", url: "", testStatus: "idle" },
-    { id: "deepseek", name: "DeepSeek", enabled: true, key: "", url: "", testStatus: "idle" },
-    { id: "gitkraken", name: "GitKraken AI", enabled: true, key: "", url: "", testStatus: "idle" },
-    { id: "github-copilot", name: "GitHub Copilot", enabled: true, key: "", url: "", testStatus: "idle" },
+export default function AIProviderSettings() {
+  const [leftColumnProviders, setLeftColumnProviders] = useState<AIProvider[]>([
     {
-      id: "github-copilot-vscode",
-      name: "GitHub Copilot (VS Code provided)",
+      id: "anthropic",
+      name: "Anthropic",
+      icon: "🤖",
       enabled: true,
       key: "",
       url: "",
+      expanded: true,
       testStatus: "idle",
     },
-    { id: "google", name: "Google", enabled: true, key: "", url: "", testStatus: "idle" },
-    { id: "huggingface", name: "Hugging Face", enabled: true, key: "", url: "", testStatus: "idle" },
-    { id: "ollama", name: "Ollama", enabled: true, key: "", url: "", testStatus: "idle" },
-    { id: "openai", name: "OpenAI", enabled: true, key: "", url: "", testStatus: "idle" },
-    { id: "openai-compatible", name: "OpenAI Compatible", enabled: true, key: "", url: "", testStatus: "idle" },
-    { id: "openrouter", name: "OpenRouter", enabled: true, key: "", url: "", testStatus: "idle" },
-    { id: "xai", name: "xAI", enabled: true, key: "", url: "", testStatus: "idle" },
+    { id: "azure", name: "Azure", icon: "☁️", enabled: false, key: "", url: "", expanded: false, testStatus: "idle" },
+    {
+      id: "deepseek",
+      name: "DeepSeek",
+      icon: "🔍",
+      enabled: false,
+      key: "",
+      url: "",
+      expanded: false,
+      testStatus: "idle",
+    },
+    {
+      id: "gitkraken",
+      name: "GitKraken AI",
+      icon: "🐙",
+      enabled: false,
+      key: "",
+      url: "",
+      expanded: false,
+      testStatus: "idle",
+    },
+    {
+      id: "github-copilot",
+      name: "GitHub Copilot",
+      icon: "🐱",
+      enabled: false,
+      key: "",
+      url: "",
+      expanded: false,
+      testStatus: "idle",
+    },
+    { id: "google", name: "Google", icon: "🔍", enabled: false, key: "", url: "", expanded: false, testStatus: "idle" },
   ])
 
-  const [showAllProviders, setShowAllProviders] = useState(false)
-  const [expandedProviders, setExpandedProviders] = useState<string[]>(
-    expanded ? providers.filter((p) => p.enabled).map((p) => p.id) : [],
-  )
+  const [rightColumnProviders, setRightColumnProviders] = useState<AIProvider[]>([
+    {
+      id: "huggingface",
+      name: "Hugging Face",
+      icon: "🤗",
+      enabled: true,
+      key: "",
+      url: "",
+      expanded: false,
+      testStatus: "idle",
+    },
+    { id: "ollama", name: "Ollama", icon: "🦙", enabled: false, key: "", url: "", expanded: false, testStatus: "idle" },
+    { id: "openai", name: "OpenAI", icon: "🧠", enabled: false, key: "", url: "", expanded: false, testStatus: "idle" },
+    {
+      id: "openai-compatible",
+      name: "OpenAI compatible",
+      icon: "🔗",
+      enabled: false,
+      key: "",
+      url: "",
+      expanded: false,
+      testStatus: "idle",
+    },
+    {
+      id: "openrouter",
+      name: "OpenRouter",
+      icon: "🛣️",
+      enabled: false,
+      key: "",
+      url: "",
+      expanded: false,
+      testStatus: "idle",
+    },
+    { id: "xai", name: "xAI", icon: "❌", enabled: false, key: "", url: "", expanded: false, testStatus: "idle" },
+  ])
 
-  const updateProvider = (id: string, updates: Partial<AIProvider>) => {
-    setProviders(providers.map((provider) => (provider.id === id ? { ...provider, ...updates } : provider)))
-
-    // If disabling a provider, remove it from expanded list
-    if (updates.enabled === false) {
-      setExpandedProviders((prev) => prev.filter((expandedId) => expandedId !== id))
-    }
+  const updateLeftProvider = (id: string, updates: Partial<AIProvider>) => {
+    setLeftColumnProviders((providers) =>
+      providers.map((provider) =>
+        provider.id === id
+          ? {
+              ...provider,
+              ...updates,
+              // If disabling, also collapse
+              ...(updates.enabled === false ? { expanded: false } : {}),
+              // Clear error when updating fields
+              ...(updates.key !== undefined || updates.url !== undefined ? { error: undefined } : {}),
+            }
+          : provider,
+      ),
+    )
   }
 
-  const saveAndTest = (id: string) => {
-    const provider = providers.find((p) => p.id === id)
-    if (!provider) return
+  const updateRightProvider = (id: string, updates: Partial<AIProvider>) => {
+    setRightColumnProviders((providers) =>
+      providers.map((provider) =>
+        provider.id === id
+          ? {
+              ...provider,
+              ...updates,
+              // If disabling, also collapse
+              ...(updates.enabled === false ? { expanded: false } : {}),
+              // Clear error when updating fields
+              ...(updates.key !== undefined || updates.url !== undefined ? { error: undefined } : {}),
+            }
+          : provider,
+      ),
+    )
+  }
 
-    // Validation: URL requires a key
+  const saveAndTest = (provider: AIProvider, updateFn: (id: string, updates: Partial<AIProvider>) => void) => {
+    // Validate: URL requires a key
     if (provider.url && !provider.key) {
-      alert("A compatible API key is required when using a custom URL")
+      updateFn(provider.id, { error: "A compatible API key is required when using a custom URL" })
       return
     }
 
-    updateProvider(id, { testStatus: "loading" })
+    // Clear any previous errors
+    updateFn(provider.id, { error: undefined, testStatus: "loading" })
 
     // Simulate API test
     setTimeout(() => {
       const success = Math.random() > 0.3 // 70% chance of success for demo
-      updateProvider(id, {
+      updateFn(provider.id, {
         testStatus: success ? "success" : "error",
       })
 
       // Reset status after 3 seconds
       setTimeout(() => {
-        updateProvider(id, { testStatus: "idle" })
+        updateFn(provider.id, { testStatus: "idle" })
       }, 3000)
     }, 1500)
   }
 
-  const visibleProviders = showAllProviders ? providers : providers.slice(0, 4)
-  const hiddenProviders = showAllProviders ? [] : providers.slice(4)
+  const ProviderCard = ({
+    provider,
+    onUpdate,
+  }: {
+    provider: AIProvider
+    onUpdate: (id: string, updates: Partial<AIProvider>) => void
+  }) => {
+    // Use refs to maintain input values between renders
+    // Remove these lines:
+    // const keyInputRef = useRef<HTMLInputElement>(null)
+    // const urlInputRef = useRef<HTMLInputElement>(null)
 
-  return (
-    <div className="space-y-4">
-      <Accordion type="multiple" value={expandedProviders} onValueChange={setExpandedProviders} className="space-y-4">
-        {visibleProviders.map((provider, index) => (
-          <AccordionItem
-            key={provider.id}
-            value={provider.id}
-            className="border border-gray-700 rounded-md overflow-hidden"
-          >
-            <div className="flex items-center justify-between px-4 py-3 bg-gray-800 bg-opacity-30">
-              <div className="flex items-center">
-                {provider.enabled ? (
-                  <AccordionTrigger className="hover:no-underline py-0">
-                    <span className="font-medium">{provider.name}</span>
-                  </AccordionTrigger>
-                ) : (
-                  <div className="py-0">
-                    <span className="font-medium text-gray-500">{provider.name}</span>
-                  </div>
+    const handleKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      onUpdate(provider.id, { key: e.target.value })
+    }
+
+    const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      onUpdate(provider.id, { url: e.target.value })
+    }
+
+    return (
+      <div className="border border-gray-700 rounded-md overflow-hidden mb-3">
+        <div className="flex items-center justify-between px-4 py-3 bg-gray-800 bg-opacity-30">
+          <div className="flex items-center flex-1">
+            {provider.enabled ? (
+              <button
+                onClick={() => onUpdate(provider.id, { expanded: !provider.expanded })}
+                className="flex items-center gap-2 text-left hover:text-gray-300 transition-colors"
+              >
+                <span className="text-lg">{provider.icon}</span>
+                <span className="font-medium">{provider.name}</span>
+                {provider.expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-lg opacity-50">{provider.icon}</span>
+                <span className="font-medium text-gray-500">{provider.name}</span>
+                <ChevronDown className="h-4 w-4 text-gray-500" />
+              </div>
+            )}
+
+            {/* Indicators for key and URL */}
+            {(provider.key || provider.url) && (
+              <div className="flex items-center gap-1 ml-2">
+                {provider.key && (
+                  <span
+                    className={`px-1.5 py-0.5 text-xs rounded ${
+                      provider.enabled
+                        ? "bg-blue-500 bg-opacity-30 text-blue-400"
+                        : "bg-gray-600 bg-opacity-50 text-gray-500"
+                    }`}
+                  >
+                    Key
+                  </span>
                 )}
-                <div className="flex items-center ml-2 space-x-1">
-                  {provider.key && <span className="w-2 h-2 bg-green-500 rounded-full" title="API Key configured" />}
-                  {provider.url && <span className="w-2 h-2 bg-blue-500 rounded-full" title="Custom URL configured" />}
-                </div>
+                {provider.url && (
+                  <span
+                    className={`px-1.5 py-0.5 text-xs rounded ${
+                      provider.enabled
+                        ? "bg-green-500 bg-opacity-30 text-green-400"
+                        : "bg-gray-600 bg-opacity-50 text-gray-500"
+                    }`}
+                  >
+                    URL
+                  </span>
+                )}
               </div>
-              <div className="flex items-center">
-                <Switch
-                  checked={provider.enabled}
-                  onCheckedChange={(checked) => updateProvider(provider.id, { enabled: checked })}
-                  className="data-[state=checked]:bg-[#a881fc]"
-                />
-              </div>
+            )}
+          </div>
+          <Switch
+            checked={provider.enabled}
+            onCheckedChange={(checked) => onUpdate(provider.id, { enabled: checked })}
+            className="data-[state=checked]:bg-[#a881fc]"
+          />
+        </div>
+
+        {provider.enabled && provider.expanded && (
+          <div className="px-4 py-4 space-y-4">
+            <div className="relative">
+              <input
+                type="password"
+                value={provider.key}
+                onChange={(e) => onUpdate(provider.id, { key: e.target.value })}
+                placeholder="Enter API key"
+                className="flex h-10 w-full rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#a881fc] focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 pr-10"
+              />
+              {provider.key && (
+                <button
+                  onClick={() => onUpdate(provider.id, { key: "" })}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors"
+                >
+                  <XCircle className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                value={provider.url}
+                onChange={(e) => onUpdate(provider.id, { url: e.target.value })}
+                placeholder="Enter Custom URL"
+                className="flex h-10 w-full rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#a881fc] focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 pr-10"
+              />
+              {provider.url && (
+                <button
+                  onClick={() => onUpdate(provider.id, { url: "" })}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors"
+                >
+                  <XCircle className="h-4 w-4" />
+                </button>
+              )}
             </div>
 
-            <AccordionContent className="px-4 py-3">
-              {provider.enabled && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm text-gray-300 mb-1">API Key</label>
-                    <div className="flex">
-                      <Input
-                        type="password"
-                        value={provider.key}
-                        onChange={(e) => updateProvider(provider.id, { key: e.target.value })}
-                        placeholder={`Enter ${provider.name} API key`}
-                        className="bg-gray-800 border-gray-700 text-white flex-1"
-                      />
-                      {provider.key && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="ml-2 text-gray-400 hover:text-white"
-                          onClick={() => updateProvider(provider.id, { key: "" })}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+            {provider.error && (
+              <div className="flex items-center gap-2 text-red-400 text-sm">
+                <AlertCircle className="h-4 w-4" />
+                <span>{provider.error}</span>
+              </div>
+            )}
 
-                  <div>
-                    <label className="block text-sm text-gray-300 mb-1">Custom URL (optional)</label>
-                    <div className="flex">
-                      <Input
-                        type="text"
-                        value={provider.url}
-                        onChange={(e) => updateProvider(provider.id, { url: e.target.value })}
-                        placeholder={`Enter custom URL for ${provider.name}`}
-                        className="bg-gray-800 border-gray-700 text-white flex-1"
-                      />
-                      {provider.url && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="ml-2 text-gray-400 hover:text-white"
-                          onClick={() => updateProvider(provider.id, { url: "" })}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {provider.url && !provider.key
-                        ? "A compatible API key is required when using a custom URL"
-                        : "Custom URL is optional when providing an API key"}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center">
-                    <Button
-                      onClick={() => saveAndTest(provider.id)}
-                      disabled={provider.testStatus === "loading" || (!provider.key && !provider.url)}
-                      variant="outline"
-                      className="bg-transparent border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white"
-                    >
-                      {provider.testStatus === "loading" ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Testing...
-                        </>
-                      ) : provider.testStatus === "success" ? (
-                        <>
-                          <Check className="h-4 w-4 mr-2 text-green-500" />
-                          Connection successful
-                        </>
-                      ) : provider.testStatus === "error" ? (
-                        <>
-                          <X className="h-4 w-4 mr-2 text-red-500" />
-                          Connection failed
-                        </>
-                      ) : (
-                        "Save and Test"
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-
-        {/* Animated additional providers */}
-        <div
-          className={`transition-all duration-500 ease-in-out overflow-hidden ${
-            showAllProviders ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
-          }`}
-        >
-          <div className="space-y-4">
-            {hiddenProviders.map((provider, index) => (
-              <AccordionItem
-                key={provider.id}
-                value={provider.id}
-                className={`border border-gray-700 rounded-md overflow-hidden transition-all duration-300 ease-out ${
-                  showAllProviders ? "transform translate-y-0 opacity-100" : "transform translate-y-4 opacity-0"
-                }`}
-                style={{
-                  transitionDelay: showAllProviders ? `${index * 50}ms` : "0ms",
-                }}
-              >
-                <div className="flex items-center justify-between px-4 py-3 bg-gray-800 bg-opacity-30">
-                  <div className="flex items-center">
-                    {provider.enabled ? (
-                      <AccordionTrigger className="hover:no-underline py-0">
-                        <span className="font-medium">{provider.name}</span>
-                      </AccordionTrigger>
-                    ) : (
-                      <div className="py-0">
-                        <span className="font-medium text-gray-500">{provider.name}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center ml-2 space-x-1">
-                      {provider.key && (
-                        <span className="w-2 h-2 bg-green-500 rounded-full" title="API Key configured" />
-                      )}
-                      {provider.url && (
-                        <span className="w-2 h-2 bg-blue-500 rounded-full" title="Custom URL configured" />
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <Switch
-                      checked={provider.enabled}
-                      onCheckedChange={(checked) => updateProvider(provider.id, { enabled: checked })}
-                      className="data-[state=checked]:bg-[#a881fc]"
-                    />
-                  </div>
-                </div>
-
-                <AccordionContent className="px-4 py-3">
-                  {provider.enabled && (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm text-gray-300 mb-1">API Key</label>
-                        <div className="flex">
-                          <Input
-                            type="password"
-                            value={provider.key}
-                            onChange={(e) => updateProvider(provider.id, { key: e.target.value })}
-                            placeholder={`Enter ${provider.name} API key`}
-                            className="bg-gray-800 border-gray-700 text-white flex-1"
-                          />
-                          {provider.key && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="ml-2 text-gray-400 hover:text-white"
-                              onClick={() => updateProvider(provider.id, { key: "" })}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm text-gray-300 mb-1">Custom URL (optional)</label>
-                        <div className="flex">
-                          <Input
-                            type="text"
-                            value={provider.url}
-                            onChange={(e) => updateProvider(provider.id, { url: e.target.value })}
-                            placeholder={`Enter custom URL for ${provider.name}`}
-                            className="bg-gray-800 border-gray-700 text-white flex-1"
-                          />
-                          {provider.url && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="ml-2 text-gray-400 hover:text-white"
-                              onClick={() => updateProvider(provider.id, { url: "" })}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1">
-                          {provider.url && !provider.key
-                            ? "A compatible API key is required when using a custom URL"
-                            : "Custom URL is optional when providing an API key"}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center">
-                        <Button
-                          onClick={() => saveAndTest(provider.id)}
-                          disabled={provider.testStatus === "loading" || (!provider.key && !provider.url)}
-                          variant="outline"
-                          className="bg-transparent border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white"
-                        >
-                          {provider.testStatus === "loading" ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Testing...
-                            </>
-                          ) : provider.testStatus === "success" ? (
-                            <>
-                              <Check className="h-4 w-4 mr-2 text-green-500" />
-                              Connection successful
-                            </>
-                          ) : provider.testStatus === "error" ? (
-                            <>
-                              <X className="h-4 w-4 mr-2 text-red-500" />
-                              Connection failed
-                            </>
-                          ) : (
-                            "Save and Test"
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </div>
-        </div>
-      </Accordion>
-
-      {!showAllProviders && providers.length > 4 && (
-        <div className="relative">
-          <div
-            className="absolute inset-x-0 bottom-0 h-32 pointer-events-none"
-            style={{
-              background:
-                "linear-gradient(to bottom, rgba(30, 30, 30, 0) 0%, rgba(30, 30, 30, 0.3) 40%, rgba(30, 30, 30, 0.8) 80%, rgba(30, 30, 30, 1) 100%)",
-              marginBottom: "40px",
-            }}
-          />
-          <div className="pt-4">
             <Button
-              variant="ghost"
-              className="w-full text-gray-300 hover:text-white transition-all duration-200 hover:bg-gray-700"
-              onClick={() => setShowAllProviders(true)}
+              variant="outline"
+              size="sm"
+              disabled={!provider.key && !provider.url}
+              onClick={() => saveAndTest(provider, onUpdate)}
+              className="bg-transparent border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Show all providers
+              {provider.testStatus === "loading" ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Testing...
+                </>
+              ) : provider.testStatus === "success" ? (
+                <>
+                  <Check className="h-4 w-4 mr-2 text-green-500" />
+                  Connection successful
+                </>
+              ) : provider.testStatus === "error" ? (
+                <>
+                  <X className="h-4 w-4 mr-2 text-red-500" />
+                  Connection failed
+                </>
+              ) : (
+                "Save and test"
+              )}
             </Button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+    )
+  }
 
-      {showAllProviders && (
-        <Button
-          variant="ghost"
-          className="w-full text-gray-300 hover:text-white mt-4 transition-all duration-200 hover:bg-gray-700"
-          onClick={() => setShowAllProviders(false)}
-        >
-          Show fewer providers
-        </Button>
-      )}
+  return (
+    <div className="grid grid-cols-2 gap-6">
+      {/* Left Column */}
+      <div>
+        {leftColumnProviders.map((provider) => (
+          <ProviderCard key={provider.id} provider={provider} onUpdate={updateLeftProvider} />
+        ))}
+      </div>
+
+      {/* Right Column */}
+      <div>
+        {rightColumnProviders.map((provider) => (
+          <ProviderCard key={provider.id} provider={provider} onUpdate={updateRightProvider} />
+        ))}
+      </div>
     </div>
   )
 }
